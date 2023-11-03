@@ -10,3 +10,5 @@ Core goal, to keep the implementation as simple as possible, I've been round in 
 
 **Heatpump Monitoring**
 This tool could be used by an installer to create an account for each site/installation. Providing a convenient login and list of sites/installations under management. Read only access with username and password login can be provided to users. Linked users cannot access data from other users (more secure than placing multiple sites under a single emoncms account) 
+
+![accounts](accounts.png)
