@@ -3,12 +3,14 @@
 class Accounts
 {
     private $mysqli;
+    private $redis;
     private $user;
     private $table = "accounts";
 
-    public function __construct($mysqli, $user)
+    public function __construct($mysqli, $redis, $user)
     {
         $this->mysqli = $mysqli;
+        $this->redis = $redis;
         $this->user = $user;
     }
 
@@ -17,7 +19,7 @@ class Accounts
         $adminuser = (int) $adminuser;
 
         $accounts = array();
-        $result = $this->mysqli->query("SELECT linkeduser FROM ".$this->table." WHERE adminuser = '$adminuser'");
+        $result = $this->mysqli->query("SELECT linkeduser FROM ".$this->table." WHERE adminuser = '$adminuser' ORDER BY linkeduser ASC");
         while ($row = $result->fetch_object()) {
 
             // Get user details
@@ -28,11 +30,15 @@ class Accounts
             $f = $result2->fetch_object();
 
             $account = new stdClass();
-            $account->id = $row->linkeduser;
+            $account->id = $row->linkeduser*1;
             $account->username = $u->username;
+            $account->location = $u->location;
             $account->email = $u->email;
-            $account->feeds = $f->feeds;
+            $account->feeds = $f->feeds*1;
             $account->access = $this->user->get_access($row->linkeduser);
+            if (isset($u->activefeeds)) {
+                $account->activefeeds = $u->activefeeds*1;
+            }
 
             $accounts[] = $account;
         }
@@ -53,8 +59,7 @@ class Accounts
             // Get adminuser details, if email is the same turn off email verification
             $adminuser_details = $this->user->get($adminuser);
             if ($adminuser_details->email == $email) {
-                global $settings;
-                $settings["interface"]["email_verification"] = false;
+                $this->user->set_email_verification(false);
             }
             // User does not exist
             // Register user
@@ -62,6 +67,9 @@ class Accounts
             if (!$result['success']) return $result;
             // if success then get userid
             $linkeduser = $result['userid'];
+            
+            // verify email
+            $this->mysqli->query("UPDATE users SET email_verified='1' WHERE `id`='$linkeduser'");
 
             // Disable login access by default
             $this->user->set_access($linkeduser,0);

@@ -1,10 +1,15 @@
 <?php
 
 function account_controller() {
-    global $route, $session, $mysqli, $user;
+    global $route, $session, $mysqli, $redis, $user;
 
     require_once("Modules/account/account_model.php");
-    $account_class = new Accounts($mysqli, $user);
+    $account_class = new Accounts($mysqli, $redis, $user);
+    
+    // Redirect to switch
+    if ($route->action == "list" && isset($_SESSION['adminuser'])) {
+        $route->action = "switch";
+    }
     
     // List linked accounts
     // GET /account/list
