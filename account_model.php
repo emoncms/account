@@ -36,7 +36,9 @@ class Accounts
             $account->email = $u->email;
             $account->feeds = $f->feeds*1;
             $account->access = $this->user->get_access($row->linkeduser);
-            $account->activefeeds =$u->activefeeds*1;
+            if (isset($u->activefeeds)) {
+                $account->activefeeds = $u->activefeeds*1;
+            }
 
             $accounts[] = $account;
         }
