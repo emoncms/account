@@ -5,13 +5,15 @@ class Accounts
     private $mysqli;
     private $redis;
     private $user;
+    private $feed;
     private $table = "billing_linked";
 
-    public function __construct($mysqli, $redis, $user)
+    public function __construct($mysqli, $redis, $user, $feed)
     {
         $this->mysqli = $mysqli;
         $this->redis = $redis;
         $this->user = $user;
+        $this->feed = $feed;
     }
 
     public function list($adminuser)
@@ -23,12 +25,13 @@ class Accounts
         while ($row = $result->fetch_object()) {
 
             // Get user details
-            $u = $this->user->get($row->linkeduser);
+            $result2 = $this->mysqli->query("SELECT username,email,name,location,activefeeds,diskuse,apikey_read FROM users WHERE id='$row->linkeduser'");
+            $u = $result2->fetch_object();
 
             // Count feeds
             $result2 = $this->mysqli->query("SELECT COUNT(*) AS feeds FROM feeds WHERE userid = '$row->linkeduser'");
             $f = $result2->fetch_object();
-
+            
             $account = new stdClass();
             $account->id = $row->linkeduser*1;
             $account->username = $u->username;
@@ -36,10 +39,13 @@ class Accounts
             $account->email = $u->email;
             $account->feeds = $f->feeds*1;
             $account->access = $this->user->get_access($row->linkeduser);
+            $account->apikey_read = $u->apikey_read;
             if (isset($u->activefeeds)) {
                 $account->activefeeds = $u->activefeeds*1;
             }
-
+            if (isset($u->diskuse)) {
+                $account->diskuse = $u->diskuse*1;
+            }
             $accounts[] = $account;
         }
         return $accounts;
@@ -75,12 +81,17 @@ class Accounts
             $this->user->set_access($linkeduser,0);
             
         } else {
-            // else check password and fetch userid
-            $result = $this->user->get_apikeys_from_login($username,$password);
-            if (!$result['success']) {
-                return array("success"=>false,"message"=>"invalid username or password");
+            global $session;
+            if (isset($_SESSION['admin']) && $_SESSION['admin']) {
+                $linkeduser = $this->user->get_id($username);
+            } else {
+                // else check password and fetch userid
+                $result = $this->user->get_apikeys_from_login($username,$password);
+                if (!$result['success']) {
+                    return array("success"=>false,"message"=>"invalid username or password");
+                }
+                $linkeduser = $result['userid'];
             }
-            $linkeduser = $result['userid'];
         }
 
         // Check linked user is not admin user
@@ -104,6 +115,75 @@ class Accounts
         $this->redis->hset("billing:$linkeduser","balance",0);
         
         return array("success"=>true,"message"=>"user linked");
+    }
+
+    // Change linked user password
+    public function change_password($adminuser, $linkeduser, $password) {
+        $adminuser = (int) $adminuser;
+        $linkeduser = (int) $linkeduser;
+
+        // Check if linkeduser belongs to adminuser
+        if (!$this->is_linked($adminuser,$linkeduser)) {
+            return array("success"=>false,"message"=>"invalid linked userid");
+        }
+
+        // Change password
+        if (strlen($password) < 4 || strlen($password) > 250) return array('success'=>false, 'message'=>_("Password length error"));
+
+        $hash = hash('sha256', $password);
+        $salt = generate_secure_key(16);
+        $password = hash('sha256', $salt . $hash);
+        $stmt = $this->mysqli->prepare("UPDATE users SET password = ?, salt = ? WHERE id = ?");
+        $stmt->bind_param("ssi", $password, $salt, $linkeduser);
+        $stmt->execute();
+        $stmt->close();
+        
+        return array("success"=>true,"message"=>"password updated");
+    }
+
+    // Change location
+    public function change_location($adminuser, $linkeduser, $location)
+    {
+        $adminuser = (int) $adminuser;
+        $linkeduser = (int) $linkeduser;
+        $location = preg_replace('/[^\p{N}\p{L}_\s\-.]/u','',$location);
+
+        // Check if linkeduser belongs to adminuser
+        if (!$this->is_linked($adminuser,$linkeduser)) {
+            return array("success"=>false,"message"=>"invalid linked userid");
+        }
+
+        // Edit user
+        $stmt = $this->mysqli->prepare("UPDATE users SET location=? WHERE id=?");
+        $stmt->bind_param("si", $location, $linkeduser);
+        $stmt->execute();
+        $stmt->close();
+        return array("success"=>true,"message"=>"location updated");
+    }
+
+    // Change email
+    public function change_email($adminuser, $linkeduser, $email)
+    {
+        $adminuser = (int) $adminuser;
+        $linkeduser = (int) $linkeduser;
+        $email = trim($email);
+
+        // Check if linkeduser belongs to adminuser
+        if (!$this->is_linked($adminuser,$linkeduser)) {
+            return array("success"=>false,"message"=>"invalid linked userid");
+        }
+
+        // Check if email is valid
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return array("success"=>false,"message"=>"invalid email");
+        }
+
+        // Edit user
+        $stmt = $this->mysqli->prepare("UPDATE users SET email=? WHERE id=?");
+        $stmt->bind_param("si", $email, $linkeduser);
+        $stmt->execute();
+        $stmt->close();
+        return array("success"=>true,"message"=>"email updated");
     }
     
     public function unlink($adminuser,$linkeduser)
@@ -225,5 +305,35 @@ class Accounts
         
         // no linked or admin users
         return array("success"=>false,"message"=>"user not found in accounts table");
+    }
+
+    // Refresh account stats, disk use and active feeds
+    public function refresh_account_stats($adminuser) {
+        $adminuser = (int) $adminuser;
+
+        $result = $this->mysqli->query("SELECT linkeduser FROM ".$this->table." WHERE adminuser = '$adminuser' ORDER BY linkeduser ASC");
+        while ($row = $result->fetch_object()) {
+            $this->feed->update_user_feeds_size($row->linkeduser);
+            $this->count_active_feeds($row->linkeduser);
+        }
+    }
+
+    public function count_active_feeds($userid) {
+        $userid = (int) $userid;
+
+        $activefeeds = 0;
+        $now = time();
+
+        $result = $this->mysqli->query("SELECT id FROM feeds WHERE userid = '$userid'");
+        while ($row = $result->fetch_object()) {
+            $feedid = $row->id;
+            $time = $this->redis->hget("feed:$feedid","time");
+            if ($time!=null) {
+                if (($now-$time)<(3600*3)) {
+                    $activefeeds++;
+                }
+            }
+        }
+        $this->mysqli->query("UPDATE users SET `activefeeds` = '$activefeeds' WHERE `id`= '$userid'");
     }
 }
