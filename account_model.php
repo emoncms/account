@@ -78,7 +78,7 @@ class Accounts
             $this->mysqli->query("UPDATE users SET email_verified='1' WHERE `id`='$linkeduser'");
 
             // Disable login access by default
-            $this->user->set_access($linkeduser,0);
+            $this->user->set_access($linkeduser,2);
             
         } else {
             global $session;
