@@ -11,6 +11,9 @@ global $path;
 
 <div id="app">
     <h2><?php echo _("My Accounts"); ?></h2>
+    
+    <p>Multi-account administration.</p>
+
 
     <div class="input-prepend input-append" style="float:right">
         <button class="btn" id="open-add-user-modal"><i class="icon icon-plus"></i> <?php echo _("Add new user"); ?></button>
@@ -33,10 +36,16 @@ global $path;
             <th @click="sort('location', 'asc')" style="cursor:pointer"><?php echo _("Location"); ?></th>
             <th @click="sort('email', 'asc')" style="cursor:pointer"><?php echo _("Email"); ?></th>
             <th @click="sort('access', 'asc')" style="cursor:pointer"><?php echo _("User Login"); ?></th>
-            <th @click="sort('feeds', 'asc')" style="cursor:pointer"><?php echo _("Feeds"); ?></th>
+            <th @click="sort('diskuse', 'asc')" style="cursor:pointer"><?php echo _("Diskuse"); ?></th>
+            <th @click="sort('activefeeds', 'asc')" style="cursor:pointer"><?php echo _("Feeds"); ?></th>
+            <th></th>
             <th></th>
         </tr>
-        <tr v-for="(user,index) in fAccounts">
+        <tr v-for="(user,index) in fAccounts" :class="{
+            'success': user.activefeeds / user.feeds > 0.8, 
+            'error': user.activefeeds / user.feeds < 0.2,
+            'warning': user.activefeeds / user.feeds >= 0.2 && user.activefeeds / user.feeds <= 0.8
+        }">
             <td><a class="btn btn-info btn-sm" :href="path+'account/switch?userid='+user.id">view</a></td>
             <td>{{ user.id }}</td>
             <td>{{ user.username }}</td>
@@ -47,10 +56,16 @@ global $path;
                 <span class="label label-warning" v-if="user.access==1">Read only</span>
                 <span class="label label-success" v-if="user.access==2">Write access</span>
             </td>
-            <td><b>{{ user.feeds }}</b></td>
+            <td>{{ user.diskuse | diskuse }}</td>
+            <td><b><span style="color:#468847">{{ user.activefeeds }}</span>/{{ user.feeds }}</b></td>
+            <td @click="edit(index)" style="cursor:pointer"><i class="icon-pencil"></i></td>
             <td @click="unlink(index)" style="cursor:pointer"><i class="icon-trash"></i></td>
         </tr>
     </table>
+
+    <div class="input-prepend">
+        <button class="btn" @click="refresh"><i class="icon-refresh"></i> <?php echo _("Refresh disk use and active feeds"); ?></button>
+    </div>
 
     <div id="addNewUserModal" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="addNewUserModalLabel" aria-hidden="true" data-backdrop="static" style="width:300px">
         <div class="modal-header">
@@ -84,6 +99,42 @@ global $path;
             <button class="btn btn-info"  @click="add_account"><?php echo _('Add user'); ?></button>
         </div>
     </div>
+
+    <!-- Edit user modal -->
+    <div id="editUserModal" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="editUserModalLabel" aria-hidden="true" data-backdrop="static" style="max-width:600px">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h3 id="editUserModalLabel">Edit User</h3>
+        </div>
+        <div class="modal-body">
+            <div class="input-prepend input-append">
+                <span class="add-on" style="width:150px">Location:</span>
+                <input v-model="edit_location" type="text" style="width:200px" />
+                <button class="btn btn-primary" @click="update_location">Save</button>
+            </div>
+
+            <div class="input-prepend input-append">
+                <span class="add-on" style="width:150px">Email:</span>
+                <input v-model="edit_email" type="text" style="width:200px" />
+                <button class="btn btn-primary" @click="update_email">Save</button>
+            </div>
+
+            <br>
+
+            <div class="input-prepend input-append">
+                <span class="add-on" style="width:150px">Password:</span>
+                <input v-model="edit_password" type="text" style="width:200px" />
+                <button class="btn" @click="generate_password">Generate</button>
+                <button class="btn btn-primary" @click="update_password">Save</button>
+            </div>
+            
+
+            <div class="alert alert-error" v-if="edit_error" style="margin-bottom:0px">{{ edit_error }}</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" data-dismiss="modal" aria-hidden="true"><?php echo _('Close'); ?></button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -93,11 +144,19 @@ global $path;
         data: {
             accounts: [],
             user: {},
+            // Add
             add_username: "",
             add_password: "",
             add_email: "",
             add_timezone: "",
             add_error: false,
+            // Edit
+            edit_userid: 0,
+            edit_location: "",
+            edit_email: "",
+            edit_password: "",
+            edit_error: false,
+            // Sort
             currentSortColumn: 'id',
             currentSortDir: 'desc',
             filterKey: ''
@@ -105,6 +164,11 @@ global $path;
         mounted: function() {
             this.getAccounts();
             this.getUser();
+
+            // refresh after 3 seconds
+            setTimeout(function() {
+                app.refresh();
+            }, 1000);
         },
         methods: {
             getAccounts: function() {
@@ -146,6 +210,80 @@ global $path;
                             $('#addNewUserModal').modal('hide');
                         } else {
                             app.add_error = result.message;
+                        }
+                    }
+                });
+            },
+            edit : function(index) {
+                app.edit_userid = app.accounts[index].id;
+                app.edit_location = app.accounts[index].location;
+                app.edit_email = app.accounts[index].email;
+                app.edit_error = false;
+                $('#editUserModal').modal('show');
+            },
+            update_location: function() {
+                $.ajax({
+                    type: "POST",
+                    url: path + "account/location.json",
+                    dataType: 'json',
+                    data: {
+                        userid: app.edit_userid,
+                        location: app.edit_location
+                    },
+                    success: function(result) {
+                        if (result.success) {
+                            app.getAccounts();
+                            $('#editUserModal').modal('hide');
+                        } else {
+                            app.edit_error = result.message;
+                        }
+                    }
+                });
+            },
+            update_email: function() {
+                $.ajax({
+                    type: "POST",
+                    url: path + "account/email.json",
+                    dataType: 'json',
+                    data: {
+                        userid: app.edit_userid,
+                        email: app.edit_email
+                    },
+                    success: function(result) {
+                        if (result.success) {
+                            app.getAccounts();
+                            $('#editUserModal').modal('hide');
+                        } else {
+                            app.edit_error = result.message;
+                        }
+                    }
+                });
+            },
+            generate_password: function() {
+                var length = 16;
+                var charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                var retVal = "";
+                for (var i = 0, n = charset.length; i < length; ++i) {
+                    retVal += charset.charAt(Math.floor(Math.random() * n));
+                }
+                app.edit_password = retVal;
+            },
+            update_password: function() {
+                $.ajax({
+                    type: "POST",
+                    url: path + "account/password.json",
+                    dataType: 'json',
+                    data: {
+                        userid: app.edit_userid,
+                        password: encodeURIComponent(app.edit_password)
+                    },
+                    success: function(result) {
+                        if (result.success) {
+                            alert("Password updated");
+                            app.getAccounts();
+                            $('#editUserModal').modal('hide');
+                        } else {
+                            app.edit_error = result.message;
                         }
                     }
                 });
@@ -216,6 +354,16 @@ global $path;
                     })
                 }
                 return true;
+            },
+            refresh: function() {
+                $.ajax({
+                    type: "GET",
+                    url: path + "account/refresh.json",
+                    dataType: 'json',
+                    success: function(result) {
+                        app.getAccounts();
+                    }
+                });
             }
         },
         filters: {
@@ -224,6 +372,14 @@ global $path;
                 if (value == 1) return "Read only";
                 if (value == 2) return "Write access";
                 return "Unknown";
+            },
+            diskuse: function(value) {
+                let mb = value / (1024*1024);
+                if (mb>10) {
+                    return mb.toFixed(0)+" MB";
+                } else {
+                    return mb.toFixed(1)+" MB";
+                }
             }
         },
         computed: {
