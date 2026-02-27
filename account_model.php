@@ -6,7 +6,7 @@ class Accounts
     private $redis;
     private $user;
     private $feed;
-    private $table = "billing_linked";
+    private $table = "accounts";
 
     public function __construct($mysqli, $redis, $user, $feed)
     {
