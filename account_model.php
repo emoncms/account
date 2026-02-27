@@ -25,7 +25,7 @@ class Accounts
         while ($row = $result->fetch_object()) {
 
             // Get user details
-            $result2 = $this->mysqli->query("SELECT username,email,name,location,activefeeds,diskuse,apikey_read FROM users WHERE id='$row->linkeduser'");
+            $result2 = $this->mysqli->query("SELECT * FROM users WHERE id='$row->linkeduser'");
             $u = $result2->fetch_object();
 
             // Count feeds
@@ -40,12 +40,19 @@ class Accounts
             $account->feeds = $f->feeds*1;
             $account->access = $this->user->get_access($row->linkeduser);
             $account->apikey_read = $u->apikey_read;
+
             if (isset($u->activefeeds)) {
                 $account->activefeeds = $u->activefeeds*1;
+            } else {
+                $account->activefeeds = 0;
             }
+
             if (isset($u->diskuse)) {
                 $account->diskuse = $u->diskuse*1;
+            } else {
+                $account->diskuse = 0;
             }
+            
             $accounts[] = $account;
         }
         return $accounts;
