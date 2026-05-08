@@ -25,11 +25,12 @@ class Accounts
         while ($row = $result->fetch_object()) {
 
             // Get user details
-            $result2 = $this->mysqli->query("SELECT * FROM users WHERE id='$row->linkeduser'");
+            $linkeduser_id = (int) $row->linkeduser;
+            $result2 = $this->mysqli->query("SELECT * FROM users WHERE id='$linkeduser_id'");
             $u = $result2->fetch_object();
 
             // Count feeds
-            $result2 = $this->mysqli->query("SELECT COUNT(*) AS feeds FROM feeds WHERE userid = '$row->linkeduser'");
+            $result2 = $this->mysqli->query("SELECT COUNT(*) AS feeds FROM feeds WHERE userid = '$linkeduser_id'");
             $f = $result2->fetch_object();
             
             $account = new stdClass();
@@ -60,6 +61,9 @@ class Accounts
 
     public function add($adminuser,$username,$password,$email,$timezone) 
     {
+        $adminuser = (int) $adminuser;
+        // $username, $password, $email and $timeszone are all validated in the user register function.
+
         // Check if adminuser is a linkeduser 
         $result = $this->mysqli->query("SELECT * FROM ".$this->table." WHERE linkeduser='$adminuser'");
         if ($result->fetch_object()) {
@@ -79,7 +83,7 @@ class Accounts
             $result = $this->user->register($username, $password, $email, $timezone);
             if (!$result['success']) return $result;
             // if success then get userid
-            $linkeduser = $result['userid'];
+            $linkeduser = (int) $result['userid'];
             
             // verify email
             $this->mysqli->query("UPDATE users SET email_verified='1' WHERE `id`='$linkeduser'");
@@ -341,6 +345,14 @@ class Accounts
                 }
             }
         }
-        $this->mysqli->query("UPDATE users SET `activefeeds` = '$activefeeds' WHERE `id`= '$userid'");
+        
+        // Check if activefeeds column exists before updating
+        $result = $this->mysqli->query("SHOW COLUMNS FROM users LIKE 'activefeeds'");
+        if ($result->num_rows > 0) {
+            $this->mysqli->query("UPDATE users SET `activefeeds` = '$activefeeds' WHERE `id`= '$userid'");
+            return true;
+        } else {
+            return false;
+        }
     }
 }
