@@ -7,7 +7,7 @@ global $path;
         max-width: 980px;
     }*/
 </style>
-<script src="<?php echo $path; ?>Lib/vue.min.js"></script>
+<?php load_js("Lib/js/vue.global.prod-3.5.22.min.js"); ?>
 
 <div id="app">
     <h2><?php echo _("My Accounts"); ?></h2>
@@ -56,7 +56,7 @@ global $path;
                 <span class="label label-warning" v-if="user.access==1">Read only</span>
                 <span class="label label-success" v-if="user.access==2">Write access</span>
             </td>
-            <td>{{ user.diskuse | diskuse }}</td>
+            <td>{{ diskuse(user.diskuse) }}</td>
             <td><b><span style="color:#468847">{{ user.activefeeds }}</span>/{{ user.feeds }}</b></td>
             <td @click="edit(index)" style="cursor:pointer"><i class="icon-pencil"></i></td>
             <td @click="unlink(index)" style="cursor:pointer"><i class="icon-trash"></i></td>
@@ -139,9 +139,8 @@ global $path;
 
 <script>
     // Vue app
-    var app = new Vue({
-        el: '#app',
-        data: {
+    var app = Vue.createApp({
+        data() { return {
             accounts: [],
             user: {},
             // Add
@@ -160,7 +159,7 @@ global $path;
             currentSortColumn: 'id',
             currentSortDir: 'desc',
             filterKey: ''
-        },
+        }; },
         mounted: function() {
             this.getAccounts();
             this.getUser();
@@ -364,14 +363,6 @@ global $path;
                         app.getAccounts();
                     }
                 });
-            }
-        },
-        filters: {
-            access: function(value) {
-                if (value == 0) return "Disabled";
-                if (value == 1) return "Read only";
-                if (value == 2) return "Write access";
-                return "Unknown";
             },
             diskuse: function(value) {
                 let mb = value / (1024*1024);
@@ -387,7 +378,7 @@ global $path;
                 return this.accounts.filter(this.filterAccounts);
             }
         }
-    });
+    }).mount('#app');
 
     $("#open-add-user-modal").click(function() {
         app.add_error = false;
