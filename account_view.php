@@ -141,6 +141,7 @@ global $path;
     // Vue app
     var app = Vue.createApp({
         data() { return {
+            path: "<?php echo $path; ?>",
             accounts: [],
             user: {},
             // Add
