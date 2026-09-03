@@ -141,9 +141,8 @@ class Accounts
         // Change password
         if (strlen($password) < 4 || strlen($password) > 250) return array('success'=>false, 'message'=>_("Password length error"));
 
-        $hash = hash('sha256', $password);
-        $salt = generate_secure_key(16);
-        $password = hash('sha256', $salt . $hash);
+        $password = hash_password($password);
+        $salt = '';
         $stmt = $this->mysqli->prepare("UPDATE users SET password = ?, salt = ? WHERE id = ?");
         $stmt->bind_param("ssi", $password, $salt, $linkeduser);
         $stmt->execute();
