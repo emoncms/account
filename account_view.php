@@ -15,12 +15,12 @@ global $path;
     <p>Multi-account administration.</p>
 
 
-    <div class="input-prepend input-append" style="float:right">
-        <button class="btn" id="open-add-user-modal"><i class="icon icon-plus"></i> <?php echo _("Add new user"); ?></button>
+    <div class="input-group" style="float:right">
+        <button class="btn btn-default" id="open-add-user-modal"><i class="icon icon-plus"></i> <?php echo _("Add new user"); ?></button>
     </div>
     
-    <div class="input-prepend" style="float:right">
-        <span class="add-on">Filter</span>
+    <div class="input-group" style="float:right">
+        <span class="input-group-text">Filter</span>
         <input type="text" v-model="filterKey" style="width:120px; margin-right:20px" />
     </div>
 
@@ -42,19 +42,19 @@ global $path;
             <th></th>
         </tr>
         <tr v-for="(user,index) in fAccounts" :class="{
-            'success': user.activefeeds / user.feeds > 0.8, 
-            'error': user.activefeeds / user.feeds < 0.2,
-            'warning': user.activefeeds / user.feeds >= 0.2 && user.activefeeds / user.feeds <= 0.8
+            'table-success': user.activefeeds / user.feeds > 0.8, 
+            'table-danger': user.activefeeds / user.feeds < 0.2,
+            'table-warning': user.activefeeds / user.feeds >= 0.2 && user.activefeeds / user.feeds <= 0.8
         }">
-            <td><a class="btn btn-info btn-sm" :href="path+'account/switch?userid='+user.id">view</a></td>
+            <td><a class="btn btn-info" :href="path+'account/switch?userid='+user.id">view</a></td>
             <td>{{ user.id }}</td>
             <td>{{ user.username }}</td>
             <td>{{ user.location }}</td>
             <td>{{ user.email }}</td>
             <td @click="change_access(index)" style="cursor:pointer" title="Click to change access level">
-                <span class="label label-inverse" v-if="user.access==0">Disabled</span>
-                <span class="label label-warning" v-if="user.access==1">Read only</span>
-                <span class="label label-success" v-if="user.access==2">Write access</span>
+                <span class="badge bg-dark" v-if="user.access==0">Disabled</span>
+                <span class="badge bg-warning" v-if="user.access==1">Read only</span>
+                <span class="badge bg-success" v-if="user.access==2">Write access</span>
             </td>
             <td>{{ diskuse(user.diskuse) }}</td>
             <td><b><span style="color:#468847">{{ user.activefeeds }}</span>/{{ user.feeds }}</b></td>
@@ -63,76 +63,84 @@ global $path;
         </tr>
     </table>
 
-    <div class="input-prepend">
-        <button class="btn" @click="refresh"><i class="icon-refresh"></i> <?php echo _("Refresh disk use and active feeds"); ?></button>
+    <div class="input-group">
+        <button class="btn btn-default" @click="refresh"><i class="icon-refresh"></i> <?php echo _("Refresh disk use and active feeds"); ?></button>
     </div>
 
-    <div id="addNewUserModal" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="addNewUserModalLabel" aria-hidden="true" data-backdrop="static" style="width:300px">
-        <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-            <h3 id="addNewUserModalLabel">Add new user</h3>
-        </div>
-        <div class="modal-body">
-
-            <p>
-                <lable>Username:</label><br>
-                <input v-model="add_username" type="text" style="width:250px" />
-            </p>
-            <p>
-                <lable>Password:</label><br>
-                <input v-model="add_password" type="text" style="width:250px" />
-            </p>
-            <p>
-                <lable>Email:</label><br>
-                <input v-model="add_email" type="text" style="width:250px" />
-            </p>
-            <p>
-                <lable>Timezone:</label><br>
-                <input v-model="add_timezone" type="text" style="width:250px" />
-            </p>
-
-            <div class="alert alert-error" v-if="add_error" style="margin-bottom:0px">{{ add_error }}</div>
-
-        </div>
-        <div class="modal-footer">
-            <button class="btn" data-dismiss="modal" aria-hidden="true"><?php echo _('Close'); ?></button>
-            <button class="btn btn-info"  @click="add_account"><?php echo _('Add user'); ?></button>
+    <div id="addNewUserModal" class="modal" tabindex="-1" aria-labelledby="addNewUserModalLabel" aria-hidden="true" data-bs-backdrop="static" style="--bs-modal-width:300px">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="addNewUserModalLabel" class="modal-title">Add new user</h3>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+        
+                    <p>
+                        <lable>Username:</label><br>
+                        <input v-model="add_username" type="text" style="width:250px" />
+                    </p>
+                    <p>
+                        <lable>Password:</label><br>
+                        <input v-model="add_password" type="text" style="width:250px" />
+                    </p>
+                    <p>
+                        <lable>Email:</label><br>
+                        <input v-model="add_email" type="text" style="width:250px" />
+                    </p>
+                    <p>
+                        <lable>Timezone:</label><br>
+                        <input v-model="add_timezone" type="text" style="width:250px" />
+                    </p>
+        
+                    <div class="alert alert-danger" v-if="add_error" style="margin-bottom:0px">{{ add_error }}</div>
+        
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-default" data-bs-dismiss="modal" aria-hidden="true"><?php echo _('Close'); ?></button>
+                    <button class="btn btn-info"  @click="add_account"><?php echo _('Add user'); ?></button>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Edit user modal -->
-    <div id="editUserModal" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="editUserModalLabel" aria-hidden="true" data-backdrop="static" style="max-width:600px">
-        <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-            <h3 id="editUserModalLabel">Edit User</h3>
-        </div>
-        <div class="modal-body">
-            <div class="input-prepend input-append">
-                <span class="add-on" style="width:150px">Location:</span>
-                <input v-model="edit_location" type="text" style="width:200px" />
-                <button class="btn btn-primary" @click="update_location">Save</button>
+    <div id="editUserModal" class="modal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="editUserModalLabel" class="modal-title">Edit User</h3>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <span class="input-group-text justify-content-center" style="width:150px; box-sizing:content-box">Location:</span>
+                        <input v-model="edit_location" type="text" style="width:200px" />
+                        <button class="btn btn-primary" @click="update_location">Save</button>
+                    </div>
+        
+                    <div class="input-group">
+                        <span class="input-group-text justify-content-center" style="width:150px; box-sizing:content-box">Email:</span>
+                        <input v-model="edit_email" type="text" style="width:200px" />
+                        <button class="btn btn-primary" @click="update_email">Save</button>
+                    </div>
+        
+                    <br>
+        
+                    <div class="input-group">
+                        <span class="input-group-text justify-content-center" style="width:150px; box-sizing:content-box">Password:</span>
+                        <input v-model="edit_password" type="text" style="width:200px" />
+                        <button class="btn btn-default" @click="generate_password">Generate</button>
+                        <button class="btn btn-primary" @click="update_password">Save</button>
+                    </div>
+                    
+        
+                    <div class="alert alert-danger" v-if="edit_error" style="margin-bottom:0px">{{ edit_error }}</div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-default" data-bs-dismiss="modal" aria-hidden="true"><?php echo _('Close'); ?></button>
+                </div>
             </div>
-
-            <div class="input-prepend input-append">
-                <span class="add-on" style="width:150px">Email:</span>
-                <input v-model="edit_email" type="text" style="width:200px" />
-                <button class="btn btn-primary" @click="update_email">Save</button>
-            </div>
-
-            <br>
-
-            <div class="input-prepend input-append">
-                <span class="add-on" style="width:150px">Password:</span>
-                <input v-model="edit_password" type="text" style="width:200px" />
-                <button class="btn" @click="generate_password">Generate</button>
-                <button class="btn btn-primary" @click="update_password">Save</button>
-            </div>
-            
-
-            <div class="alert alert-error" v-if="edit_error" style="margin-bottom:0px">{{ edit_error }}</div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn" data-dismiss="modal" aria-hidden="true"><?php echo _('Close'); ?></button>
         </div>
     </div>
 </div>
