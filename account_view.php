@@ -21,7 +21,7 @@ global $path;
     
     <div class="input-group" style="float:right">
         <span class="input-group-text">Filter</span>
-        <input type="text" v-model="filterKey" style="width:120px; margin-right:20px" />
+        <input class="form-control" type="text" v-model="filterKey" style="width:134px; margin-right:20px" />
     </div>
 
     <p><b><?php echo _("Number of users:"); ?></b> {{accounts.length}}</p>
@@ -78,19 +78,19 @@ global $path;
         
                     <p>
                         <lable>Username:</label><br>
-                        <input v-model="add_username" type="text" style="width:250px" />
+                        <input class="form-control" v-model="add_username" type="text" style="width:264px" />
                     </p>
                     <p>
                         <lable>Password:</label><br>
-                        <input v-model="add_password" type="text" style="width:250px" />
+                        <input class="form-control" v-model="add_password" type="text" style="width:264px" />
                     </p>
                     <p>
                         <lable>Email:</label><br>
-                        <input v-model="add_email" type="text" style="width:250px" />
+                        <input class="form-control" v-model="add_email" type="text" style="width:264px" />
                     </p>
                     <p>
                         <lable>Timezone:</label><br>
-                        <input v-model="add_timezone" type="text" style="width:250px" />
+                        <input class="form-control" v-model="add_timezone" type="text" style="width:264px" />
                     </p>
         
                     <div class="alert alert-danger" v-if="add_error" style="margin-bottom:0px">{{ add_error }}</div>
@@ -113,23 +113,23 @@ global $path;
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="input-group">
+                    <div class="input-group mb-2">
                         <span class="input-group-text justify-content-center" style="width:150px; box-sizing:content-box">Location:</span>
-                        <input v-model="edit_location" type="text" style="width:200px" />
+                        <input class="form-control" v-model="edit_location" type="text" style="width:214px" />
                         <button class="btn btn-primary" @click="update_location">Save</button>
                     </div>
         
-                    <div class="input-group">
+                    <div class="input-group mb-2">
                         <span class="input-group-text justify-content-center" style="width:150px; box-sizing:content-box">Email:</span>
-                        <input v-model="edit_email" type="text" style="width:200px" />
+                        <input class="form-control" v-model="edit_email" type="text" style="width:214px" />
                         <button class="btn btn-primary" @click="update_email">Save</button>
                     </div>
         
                     <br>
         
-                    <div class="input-group">
+                    <div class="input-group mb-2">
                         <span class="input-group-text justify-content-center" style="width:150px; box-sizing:content-box">Password:</span>
-                        <input v-model="edit_password" type="text" style="width:200px" />
+                        <input class="form-control" v-model="edit_password" type="text" style="width:214px" />
                         <button class="btn btn-default" @click="generate_password">Generate</button>
                         <button class="btn btn-primary" @click="update_password">Save</button>
                     </div>
