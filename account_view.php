@@ -10,7 +10,9 @@ global $path;
 <?php load_js("Lib/js/vue.global.prod-3.5.22.min.js"); ?>
 
 <div id="app">
-    <h2><?php echo _("My Accounts"); ?></h2>
+    <div class="page-header">
+        <h3><?php echo _("My Accounts"); ?></h3>
+    </div>
     
     <p>Multi-account administration.</p>
 
