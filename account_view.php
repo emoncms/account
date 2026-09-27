@@ -2,11 +2,6 @@
 defined('EMONCMS_EXEC') or die('Restricted access');
 global $path;
 ?>
-<style>
-    /*.content-container {
-        max-width: 980px;
-    }*/
-</style>
 <?php load_js("Lib/js/vue.global.prod-3.5.22.min.js"); ?>
 
 <div id="app">
